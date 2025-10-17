@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Онлайн‑редактор: очистка текста</title>
+  <style>
+    :root{
+      --bg:#0b1029;
+      --panel:#0f1536;
+      --accent:#6ea8ff;
+      --text:#f2f5ff;
+      --muted:#b5c0e7;
+      --ok:#46d160;
+      --warn:#ffd166;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#080b20);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+    header{padding:24px 20px 8px;max-width:1100px;margin:0 auto}
+    h1{margin:0 0 6px;font-size:26px}
+    p.sub{margin:0;color:var(--muted)}
+    .wrap{max-width:1100px;margin:16px auto 40px;padding:0 20px}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:980px){.grid{grid-template-columns:1fr 340px}}
+    textarea{width:100%;min-height:320px;resize:vertical;background:#0b1130;color:var(--text);border:1px solid #232a57;border-radius:16px;padding:16px 14px;outline:none;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+    textarea::placeholder{color:#7c88c5}
+    .panel{background:var(--panel);border:1px solid #232a57;border-radius:16px;padding:14px 14px 10px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    .controls{display:grid;gap:10px}
+    .row{display:flex;flex-wrap:wrap;gap:8px}
+    .btn{appearance:none;border:1px solid #2b3270;background:#18205a;color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:600;transition:.18s transform,.18s background}
+    .btn:hover{transform:translateY(-1px);background:#1c2670}
+    .btn.primary{background:var(--accent);color:#0b1029;border-color:transparent}
+    .btn.primary:hover{filter:brightness(1.05)}
+    .btn.ghost{background:transparent}
+    .tiny{font-size:12.5px;color:var(--muted)}
+    label.cb{display:flex;gap:10px;align-items:flex-start;background:#0c1333;border:1px solid #232a57;border-radius:12px;padding:10px}
+    label.cb input{margin-top:3px}
+    .stats{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-top:8px}
+    .tag{padding:2px 8px;border-radius:999px;border:1px solid #2b3270;background:#0a1233}
+    .two{display:grid;gap:12px}
+    .out{min-height:220px;white-space:pre-wrap;background:#0b1130;border:1px dashed #2b3270;border-radius:14px;padding:12px}
+    .hint{color:var(--muted);font-size:13px}
+    footer{max-width:1100px;margin:16px auto 40px;padding:0 20px;color:var(--muted)}
+    a.link{color:var(--accent)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Онлайн‑редактор для «очеловечивания» текста</h1>
+    <p class="sub">Вставьте текст слева → выберите правила → нажмите «Очистить текст». Инструмент удалит лишние пробелы, невидимые символы и приведёт форматирование в порядок.</p>
+  </header>
+
+  <div class="wrap grid">
+    <section>
+      <textarea id="input" placeholder="Вставьте сюда текст…"></textarea>
+      <div class="stats" id="statsIn"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="cleanBtn">Очистить текст</button>
+        <button class="btn" id="copyIn">Скопировать ввод</button>
+        <button class="btn ghost" id="loadFile">Загрузить .txt</button>
+        <input type="file" id="file" accept=".txt,.md,.csv,.log,.json" hidden>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="controls two">
+        <label class="cb"><input type="checkbox" id="optRemoveHidden" checked> <div><b>Удалять скрытые символы</b><br><span class="tiny">Нулевой ширины (​/‌/‍/﻿), неразрывные пробелы ( ), мягкие переносы (­), управляющие ASCII.</span></div></label>
+        <label class="cb"><input type="checkbox" id="optCollapseSpaces" checked> <div><b>Свернуть пробелы</b><br><span class="tiny">Последовательности пробелов/табов → один пробел. Трим по краям каждой строки.</span></div></label>
+        <label class="cb"><input type="checkbox" id="optBlankLines" checked> <div><b>Сжать пустые строки</b><br><span class="tiny">Несколько пустых строк → максимум одна.</span></div></label>
+        <label class="cb"><input type="checkbox" id="optPunct" checked> <div><b>Пробелы у знаков препинания</b><br><span class="tiny">Уберёт пробелы <i>перед</i> ,.;:!?%)] и добавит один пробел <i>после</i> ,.;:!? (если нужен).</span></div></label>
+        <label class="cb"><input type="checkbox" id="optQuotes"> <div><b>Привести кавычки</b><br><span class="tiny">Кудрявые кавычки и „ёлочки“ → стандартные " ".</span></div></label>
+        <label class="cb"><input type="checkbox" id="optSentenceCase"> <div><b>Заглавная в начале предложений</b><br><span class="tiny">Ставит заглавную букву после . ! ? (осторожно с аббревиатурами).</span></div></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="copyOut">Скопировать результат</button>
+        <button class="btn" id="download">Сохранить .txt</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="wrap">
+    <h3 style="margin:0 0 8px">Результат</h3>
+    <div id="output" class="out"></div>
+    <div class="stats" id="statsOut"></div>
+    <p class="hint">Подсказка: перетащите .txt‑файл в окно браузера — он загрузится в поле ввода.</p>
+  </div>
+
+  <footer>
+    Сделано вами с помощью ChatGPT. Локально, без отправки данных на сервер. Код — один HTML‑файл, можно сохранить и открыть офлайн.
+  </footer>
+
+<script>
+const $ = (s)=>document.querySelector(s);
+const input = $('#input');
+const output = $('#output');
+const statsIn = $('#statsIn');
+const statsOut = $('#statsOut');
+
+function count(text){
+  const chars = text.length;
+  const words = (text.match(/[\p{L}\p{N}]+/gu)||[]).length;
+  const lines = text.split(/\n/).length;
+  return {chars, words, lines};
+}
+
+function updateStats(){
+  const a = count(input.value);
+  statsIn.innerHTML = `<span class="tag">Ввод: ${a.chars} симв.</span><span class="tag">${a.words} слов</span><span class="tag">${a.lines} строк</span>`;
+  const b = count(output.textContent||'');
+  statsOut.innerHTML = `<span class="tag">Результат: ${b.chars} симв.</span><span class="tag">${b.words} слов</span><span class="tag">${b.lines} строк</span>`;
+}
+
+function normalize(text){
+  text = text.replace(/\r\n?/g,'\n');
+  if ($('#optRemoveHidden').checked){
+    text = text.replace(/\u00A0/g,' ');
+    text = text.replace(/[\u200B\u200C\u200D\uFEFF\u00AD]/g,'');
+    text = text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,'');
+  }
+  text = text.replace(/^[ \t]+|[ \t]+$/gm,'');
+  if ($('#optCollapseSpaces').checked){
+    text = text.replace(/[ \t]{2,}/g,' ');
+  }
+  if ($('#optBlankLines').checked){
+    text = text.replace(/\n{3,}/g,'\n\n');
+  }
+  if ($('#optPunct').checked){
+    text = text.replace(/[ \t]+(?=[,.;:!?%\)\]\}])/g,'');
+    text = text.replace(/([,.;:!?])(?![ \n\r\t\)\]\}])/g,'$1 ');
+    text = text.replace(/([—–-])(\S)/g,'$1 $2');
+    text = text.replace(/[ \t]+(\)|\]|\})/g,'$1');
+  }
+  if ($('#optQuotes').checked){
+    text = text.replace(/[«»„“”‟❝❞]/g,'"').replace(/[‚‘’❛❜]/g,"'");
+  }
+  if ($('#optSentenceCase').checked){
+    text = text.replace(/(^|[.!?]\s+)([a-zа-яё])/g, (m,p1,p2)=> p1 + p2.toUpperCase());
+  }
+  return text.trim();
+}
+
+function clean(){
+  const text = input.value;
+  const out = normalize(text);
+  output.textContent = out;
+  updateStats();
+}
+
+$('#cleanBtn').addEventListener('click', clean);
+input.addEventListener('input', updateStats);
+$('#copyIn').addEventListener('click', ()=>{ navigator.clipboard.writeText(input.value||''); });
+$('#copyOut').addEventListener('click', ()=>{ navigator.clipboard.writeText(output.textContent||''); });
+$('#download').addEventListener('click', ()=>{
+  const blob = new Blob([output.textContent||''], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cleaned.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+$('#loadFile').addEventListener('click', ()=>$('#file').click());
+$('#file').addEventListener('change', (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{ input.value = r.result; updateStats(); };
+  r.readAsText(f,'utf-8');
+});
+window.addEventListener('dragover', e=>{e.preventDefault();});
+window.addEventListener('drop', e=>{
+  e.preventDefault();
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{input.value = r.result; updateStats();};
+  r.readAsText(f,'utf-8');
+});
+updateStats();
+</script>
+</body>
+</html>
